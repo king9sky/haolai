@@ -3,16 +3,15 @@ package cn.autowit.haolai_take_out.controller;
 import cn.autowit.haolai_take_out.common.R;
 import cn.autowit.haolai_take_out.entity.Employee;
 import cn.autowit.haolai_take_out.service.EmployeeService;
+import cn.autowit.haolai_take_out.service.impl.EmployeeServiceImpl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.jni.Time;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
@@ -101,5 +100,43 @@ public class EmployeeController {
         log.info("新增员工保存成功");
         return R.success("新增员工保存成功");
 
+    }
+
+    @GetMapping("/page")
+    public R<Page> page(int page,int pageSize,String name){
+        log.info("page-{},pageSize-{},name-{}",page,pageSize,name);
+        //1、分页构造器
+        Page pageinfo = new Page(page,pageSize);
+        //2、查询
+        LambdaQueryWrapper<Employee> queryWrapper=new LambdaQueryWrapper();
+        //过滤条件
+        queryWrapper.like(StringUtils.hasLength(name),Employee::getName,name);
+        //排序条件
+        queryWrapper.orderByDesc(Employee::getUpdateTime);
+        employeeService.page(pageinfo,queryWrapper);
+
+        return R.success(pageinfo);
+    }
+
+    @PutMapping
+    public R<String> update(HttpServletRequest request,@RequestBody Employee employee){
+        Long emp =(Long) request.getSession().getAttribute("employee");
+        log.info("用户ID:{}",emp);
+        if(emp == 1){
+            employee.setUpdateTime(LocalDateTime.now());
+            employee.setUpdateUser(emp);
+            employeeService.updateById(employee);
+
+            return R.success("用户状态修改成功");
+        }
+        return R.error("用户状态修改失败");
+    }
+    @GetMapping("/{id}")
+    public R<Employee> getById(@PathVariable Long id){
+        Employee employee=employeeService.getById(id);
+        if(employee != null){
+            return R.success(employee);
+        }
+        return R.error("查询用户失败");
     }
 }
